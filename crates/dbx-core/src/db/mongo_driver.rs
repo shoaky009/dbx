@@ -149,7 +149,9 @@ pub async fn update_document(
     id: &str,
     doc_json: &str,
 ) -> Result<u64, String> {
-    let oid = mongodb::bson::oid::ObjectId::parse_str(id).map_err(|e| format!("Invalid ObjectId: {e}"))?;
+    let oid = mongodb::bson::oid::ObjectId::parse_str(id)
+        .map(Bson::ObjectId)
+        .unwrap_or_else(|_| Bson::String(id.to_string()));
     let mut new_doc: Document = serde_json::from_str(doc_json).map_err(|e| format!("Invalid JSON: {e}"))?;
     new_doc.remove("_id");
     let col = client.database(database).collection::<Document>(collection);
@@ -181,7 +183,9 @@ pub async fn update_documents(
 }
 
 pub async fn delete_document(client: &Client, database: &str, collection: &str, id: &str) -> Result<u64, String> {
-    let oid = mongodb::bson::oid::ObjectId::parse_str(id).map_err(|e| format!("Invalid ObjectId: {e}"))?;
+    let oid = mongodb::bson::oid::ObjectId::parse_str(id)
+        .map(Bson::ObjectId)
+        .unwrap_or_else(|_| Bson::String(id.to_string()));
     let col = client.database(database).collection::<Document>(collection);
     let result = col.delete_one(doc! { "_id": oid }).await.map_err(|e| e.to_string())?;
     Ok(result.deleted_count)
